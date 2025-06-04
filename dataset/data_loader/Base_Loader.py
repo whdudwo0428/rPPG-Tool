@@ -25,7 +25,7 @@ def apply_bandpass(signal_1d: np.ndarray, lowcut: float, highcut: float, fs: flo
     1D 신호에 Butterworth Band-Pass 필터를 적용하여 반환합니다.
     """
     nyq = 0.5 * fs
-    b, a = signal.butter(order, [lowcut / nyq, highcut / nyq], btype='band')
+    b, a = signal.butter(order, [lowcut / nyq, highcut / nyq], btype='bandpass')
     # edge effect를 줄이기 위해 filtfilt 사용
     return signal.filtfilt(b, a, signal_1d)
 
