@@ -1,0 +1,131 @@
+# configs/train_configs/intra/1PURE_PhysMamba.yaml
+BASE: [ '' ]
+TOOLBOX_MODE: "train_and_test"    # train_and_test  /  only_test
+
+CROP:
+  DO_DYNAMIC_DETECTION: False
+  DYNAMIC_DETECTION_FREQUENCY: 30
+  USE_HYBRID: True
+  USE_MEDIAN_FACE_BOX: False
+  WIDTH: 128
+  HEIGHT: 128
+
+TRAIN:
+  BATCH_SIZE: 8  # 16/8
+  EPOCHS: 50
+  LR: 1e-4  # <- 3e-4 / 1e-4
+  MODEL_FILE_NAME: PURE_PURE_PURE_PhysMamba
+  AUG: 1
+  LOSS:
+    ALPHA_TIME: 1.0
+    ALPHA_FREQ: 1.0
+    ALPHA_CORR: 2.0
+    ALPHA_DENORM: 8.0
+    ALPHA_WAVE_CORR: 1.0
+  DATA:
+    FS: 30
+    DATASET: PURE
+    DO_PREPROCESS: True               # 첫 실행 시 True → 캐시 생성 후 False
+    DATA_FORMAT: NDCHW
+    RAW_DATA_PATH: /home/gongjae/datasets/PURE        # RAW 데이터 경로
+    CACHED_PATH: /home/gongjae/datasets/PURE_inter   # 전처리 클립 저장 경로
+    EXP_DATA_NAME: ""
+    BEGIN: 0.0
+    END: 0.6
+    PREPROCESS:
+      BANDPASS:
+        APPLY: True
+        LOW_CUT: 0.7
+        HIGH_CUT: 3.5
+        ORDER: 4
+      DATA_TYPE: [ "Standardized" ]
+      LABEL_TYPE: [ "Standardized" ]
+      DO_CHUNK: True
+      CHUNK_LENGTH: 300   # 160
+      DATA_AUG: [ 'None' ]
+      USE_PSEUDO_PPG_LABEL: False
+      CROP_FACE:
+        DO_CROP_FACE: True
+        BACKEND: "FACEMESH"
+      RESIZE:
+        H: 128
+        W: 128
+
+VALID:
+  DATA:
+    FS: 30
+    DATASET: PURE
+    DO_PREPROCESS: True
+    DATA_FORMAT: NDCHW
+    RAW_DATA_PATH: /home/gongjae/datasets/PURE
+    CACHED_PATH: /home/gongjae/datasets/PURE_inter
+    EXP_DATA_NAME: ""
+    BEGIN: 0.6
+    END: 1.0
+    PREPROCESS:
+      BANDPASS:
+        APPLY: True
+        LOW_CUT: 0.7
+        HIGH_CUT: 3.5
+        ORDER: 4
+      DATA_TYPE: [ "Standardized" ]
+      LABEL_TYPE: [ "Standardized" ]
+      DO_CHUNK: True
+      CHUNK_LENGTH: 300  # 160
+      DATA_AUG: [ 'None' ]
+      USE_PSEUDO_PPG_LABEL: False
+      CROP_FACE:
+        DO_CROP_FACE: True
+        BACKEND: "FACEMESH"
+      RESIZE:
+        H: 128
+        W: 128
+
+TEST:
+  METRICS: [ 'MAE','RMSE','MAPE','Pearson','SNR','BA' ]
+  USE_LAST_EPOCH: False
+  DATA:
+    FS: 30
+    DATASET: PURE
+    DO_PREPROCESS: True
+    DATA_FORMAT: NDCHW
+    RAW_DATA_PATH: /home/gongjae/datasets/PURE
+    CACHED_PATH: /home/gongjae/datasets/PURE_inter
+    EXP_DATA_NAME: ""
+    BEGIN: 0.6
+    END: 1.0
+    PREPROCESS:
+      BANDPASS:
+        APPLY: True
+        LOW_CUT: 0.7
+        HIGH_CUT: 3.5
+        ORDER: 4
+      DATA_TYPE: [ "Standardized" ]
+      LABEL_TYPE: [ "Standardized" ]
+      DO_CHUNK: True
+      CHUNK_LENGTH: 300  # 160
+      DATA_AUG: [ 'None' ]
+      USE_PSEUDO_PPG_LABEL: False
+      CROP_FACE:
+        DO_CROP_FACE: True
+        BACKEND: "FACEMESH"
+      RESIZE:
+        H: 128
+        W: 128
+
+DEVICE: cuda:0
+NUM_OF_GPU_TRAIN: 1
+LOG:
+  PATH: runs/exp/PURE
+MODEL:
+  DROP_RATE: 0.2
+  NAME: PhysMamba
+  MODEL_DIR: ./output/PURE_PURE_PhysMamba
+INFERENCE:
+  BATCH_SIZE: 1   # 16
+  EVALUATION_METHOD: "FFT"
+  EVALUATION_WINDOW:
+    USE_SMALLER_WINDOW: True
+    WINDOW_SIZE: 30    # 10
+    WINDOW_STEP_SIZE:  7.5
+  MODEL_PATH: ''  # ''
