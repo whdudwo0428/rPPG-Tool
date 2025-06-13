@@ -15,6 +15,12 @@ import argparse
 import random
 import time
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'      # only FATAL
+os.environ['MESA_LOADER_DRIVER_OVERRIDE'] = 'kms_swrast'  # libEGL swrast 오류 억제
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning, module='absl')          # absl warning off
+warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')     # mediapipe facemesh off
+
 
 import numpy as np
 import torch
@@ -76,6 +82,7 @@ def train_and_test(config, data_loader_dict):
     trainer.test(data_loader_dict)
 
 
+
 def only_test(config, data_loader_dict):
     """
     모델 이름이 'PhysMamba'여야만 사용 가능.
@@ -98,6 +105,9 @@ def unsupervised_method_inference(config, data_loader):
 
 
 if __name__ == "__main__":
+    mp.set_start_method('spawn', force=True)
+    ctx = mp.get_context('spawn')
+
     # ─── CLI 파서 & Config 로드 ────────────────────────────────────────────
     parser = argparse.ArgumentParser()
     parser = add_args(parser)
@@ -105,6 +115,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config = get_config(args)
+
+    if args.cached_path is not None:
+        for split in ["TRAIN", "VALID", "TEST", "UNSUPERVISED"]:
+            data_cfg = getattr(config, split).DATA
+            data_cfg.CACHED_PATH    = args.cached_path
+            data_cfg.FILE_LIST_PATH = os.path.join(args.cached_path, "DataFileLists")
+
+    data_type = config.TRAIN.DATA.PREPROCESS.DATA_TYPE[0] if config.TRAIN.DATA.PREPROCESS.DATA_TYPE else None
+    print("Data type:", data_type)
 
     config.defrost()
     config.VERBOSE            = args.verbose
@@ -132,7 +151,9 @@ if __name__ == "__main__":
         else:
             raise ValueError(f"Unsupported dataset: {ds}")
 
+
         if config.TOOLBOX_MODE == "train_and_test":
+
             # 1) Train DataLoader
             train_ds = LoaderClass(
                 name="train",
@@ -143,9 +164,10 @@ if __name__ == "__main__":
                 dataset=train_ds,
                 batch_size=config.TRAIN.BATCH_SIZE,
                 shuffle=True,
-                num_workers=4,            # 시스템 환경에 맞춰 2~8 정도로 조정
-                pin_memory=True,          # CPU→GPU 복사 최적화
-                persistent_workers=True,   # epoch 간 워커 유지
+                num_workers=2,            # 시스템 환경에 맞춰 2~8 정도로 조정
+                multiprocessing_context=ctx,
+                pin_memory=False,          # CPU→GPU 복사 최적화
+                persistent_workers=False,   # epoch 간 워커 유지
                 worker_init_fn=seed_worker,
                 generator=train_generator
             )
@@ -160,9 +182,10 @@ if __name__ == "__main__":
                 dataset=valid_ds,
                 batch_size=config.TRAIN.BATCH_SIZE,
                 shuffle=False,
-                num_workers=4,
-                pin_memory=True,
-                persistent_workers=True,
+                num_workers=2,
+                multiprocessing_context=ctx,
+                pin_memory=False,
+                persistent_workers=False,
                 worker_init_fn=seed_worker,
                 generator=general_generator
             )
@@ -177,9 +200,9 @@ if __name__ == "__main__":
             dataset=test_ds,
             batch_size=config.INFERENCE.BATCH_SIZE,
             shuffle=False,
-            num_workers=4,
-            pin_memory=True,
-            persistent_workers=True,
+            num_workers=2,
+            pin_memory=False,
+            persistent_workers=False,
             worker_init_fn=seed_worker,
             generator=general_generator
         )
@@ -205,8 +228,9 @@ if __name__ == "__main__":
             batch_size=1,
             shuffle=False,
             num_workers=4,
-            pin_memory=True,
-            persistent_workers=True,
+            multiprocessing_context=ctx,
+            pin_memory=False,
+            persistent_workers=False,
             worker_init_fn=seed_worker,
             generator=general_generator
         )
